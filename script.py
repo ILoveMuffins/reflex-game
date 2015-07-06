@@ -7,7 +7,7 @@ import random
 from time import time
 from time import sleep
 
-pspos.setclocks(333,166) # @TODO ustaw minimalne wartosc
+pspos.setclocks(333,166) # @TODO ustaw minimalne wartosci
 
 class Time:
     def __init__(self):
@@ -17,20 +17,24 @@ class Time:
         self.start_time = time()
 
     def get_difference(self):
-        self.stop_time = time()
-        difference = abs(self.stop_time - self.start_time)
+        difference = abs(time() - self.start_time)
+        return difference
 
 class Player:
-    def __init__(self, nick):
+    def __init__(self, nick, max_points=10):
         self.nick = nick
         self.points = 0
         self.time = 0
+        self.MAX_POINTS = max_points
 
     def add_point(self):
         self.points += 1
 
     def sub_point(self):
         self.points -= 1
+
+    def has_all_points(self):
+        return self.points == MAX_POINTS
 
     def add_time(self, time):
         self.time += time
