@@ -1,5 +1,5 @@
 '''
- @author Kamil Drozdzal
+ @author ILoveMuffins
 '''
 
 import psp2d, pspos
@@ -42,12 +42,11 @@ class Player:
     def get_score(self):
         return int(self.time * 1000)
 
-# @TODO odkomentowac po stworzeniu odpowiednich klas
 class Logic:
     def __init__(self):
         pass
-        #self.int_to_button = {0:Left(), 1:Right(), 2:Up(), 3:Down(),
-        #       4:Triangle(), 5:Square(), 6:Cross(), 7:Circle() }
+        self.int_to_button = {0:Left(), 1:Right(), 2:Up(), 3:Down(),
+               4:Triangle(), 5:Square(), 6:Cross(), 7:Circle() }
 
     def generate_button(self):
         rand_int = random.randint(0, 7)
