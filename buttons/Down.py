@@ -1,4 +1,6 @@
-class Down:
+import psp2d
+
+class Down(Button):
     def __init__(self):
-        pass
+        self.image = psp2d.Image('../res/down.jpg')
 
