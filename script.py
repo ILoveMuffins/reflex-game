@@ -6,7 +6,14 @@ import psp2d, pspos
 import random
 from time import time
 from time import sleep
-from buttons import *
+from buttons import Left
+from buttons import Right
+from buttons import Up
+from buttons import Down
+from buttons import Circle
+from buttons import Triangle
+from buttons import Squre
+from buttons import Cross
 
 pspos.setclocks(133, 66)
 
@@ -68,7 +75,7 @@ class Logic:
 class GUI:
     def __init__(self):
         self.initialize_screen()
-        self.font = psp2d.Font('font.png')
+        self.font = psp2d.Font('../res/font.png')
         self.player = Player('Zuitek')
         self.logic = Logic()
         self.menu_options = { 0:('Start',220, start_game),
