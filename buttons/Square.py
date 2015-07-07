@@ -1,4 +1,5 @@
 import psp2d
+from Button import Button
 
 class Square(Button):
     def __init__(self):
