@@ -15,7 +15,7 @@ from buttons.Triangle import Triangle
 from buttons.Square import Square
 from buttons.Cross import Cross
 
-pspos.setclocks(133, 66)
+pspos.setclocks(75, 37)
 
 class Rectangle(object):
     def __init__(self, x1, y1, x2, y2):
@@ -94,38 +94,43 @@ class GUI:
         #to powinna byc lista slownikow, kazdy slownik zawierac
         #powinien cale info o jednej opcji menu
         self.menu_options = { 0:('Start',170, self.start_game),
-                1:('High Score',200, self.high_score), 2:('Exit',230, self.exit) }
+                1:('High Score',200, self.high_score),
+                2:('Exit',230, self.exit) }
         self.OPTIONS_NUMBER = len(self.menu_options)
         self.marked_option = 0
 
     def initialize_screen(self):
         self.image = psp2d.Image(480, 272)
         self.screen = psp2d.Screen()
-        self._clear_screen()
+        self._clear_screen_to_black()
 
-    def _clear_screen(self):
+    def _clear_screen_to_black(self):
         color = psp2d.Color(0,0,0,255)
         self.image.clear(color)
-        self.screen.blit(self.image)
-        self.screen.swap()
 
     def run(self):
-        self._draw_menu()
-        self._get_chosen_menu_option()
+        self._get_chosen_option_from_menu()
         reaction_function = self.menu_options[self.marked_option][3]
         reaction_function()
 
+    def _get_chosen_option_from_menu(self):
+        self._draw_menu()
+        pad = psp2d.Controller()
+        while not pad.start:
+            self._react_to_pad_event_in_menu(pad)
+            sleep(0.06) #idealnie dobrana stala
+            self._draw_menu()
+            pad = psp2d.Controller()
+
     def _draw_menu(self):
-        #@TODO
-        # wyswietl autora
-        # wcisnij <select> aby wybrac gracza
-        # if self.player != None: "wcisnij <start> aby zagrac"
-        self._clear_screen()
-        self._draw_mark_rect_in_point(100,
-                self.menu_options[self.marked_option][1])
+        self._clear_screen_to_black()
         self._print_menu_options()
-        self.screen.blit(self.image)
-        self.screen.swap()
+        #self._draw_mark_rect_in_point(150,
+        #        self.menu_options[self.marked_option][1])
+        self._get_chosen_option_from_menu()
+        #self.screen.blit(self.image) #bez tego wyswietlaja sie czcionki
+        # bo raczej nie caly screen powinien byc blit'owany a jego czesc?
+        self.screen.swap() #bez tego ekran nic nie wyswietla
 
     def _draw_mark_rect_in_point(self, x, y):
         color = psp2d.Color(0, 200, 0, 255)
@@ -133,16 +138,17 @@ class GUI:
         rectangle.draw(self.image, color)
 
     def _print_menu_options(self):
-        self.font.drawText(self.screen, 180, 170, self.menu_options[0][0])
-        self.font.drawText(self.screen, 180, 200, self.menu_options[1][0])
-        self.font.drawText(self.screen, 180, 230, self.menu_options[2][0])
-
-    def _get_chosen_menu_option(self):
-        pad = psp2d.Controller()
-        while not pad.start:
-            self._react_to_pad_event_in_menu(pad)
-            self._draw_menu()
-            pad = psp2d.Controller()
+        if self.marked_option == 0:
+            m0, m1, m2 = '->', '', ''
+        elif self.marked_option == 1:
+            m0, m1, m2 = '', '->', ''
+        elif self.marked_option == 2:
+            m0, m1, m2 = '', '', '->'
+        else:
+            pass #raise
+        self.font.drawText(self.screen, 180, 170, m0 + self.menu_options[0][0])
+        self.font.drawText(self.screen, 180, 200, m1 + self.menu_options[1][0])
+        self.font.drawText(self.screen, 180, 230, m2 + self.menu_options[2][0])
 
     def _react_to_pad_event_in_menu(self, pad):
         if pad.up:
@@ -164,7 +170,7 @@ class GUI:
         #sleep(1)
         #while not self.player.has_all_points():
         #    sleep(1)
-        #    self._clear_screen()
+        #    self._clear_screen_to_black()
         #    button = self.logic.generate_button()
         #    waiting_time = self.logic.compute_time_to_wait_for_button_appear()
         #    view_time = self.logic.compute_viewing_time()
@@ -198,4 +204,9 @@ class GUI:
 
 gui = GUI()
 gui.run()
+
+#@TODO
+# wyswietl autora
+# wcisnij <select> aby wybrac gracza
+# if self.player != None: "wcisnij <start> aby zagrac"
 
