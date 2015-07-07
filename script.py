@@ -17,6 +17,19 @@ from buttons.Cross import Cross
 
 pspos.setclocks(133, 66)
 
+class Rectangle(object):
+    def __init__(self, x1, y1, x2, y2):
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+
+    def isIn(self, x, y):
+        return x >= self.x1 and y >= self.y1 and x <= self.x2 and y <= self.y2
+
+    def draw(self, img, color=psp2d.Color(255, 0, 0)):
+        img.fillRect(self.x1, self.y1, self.x2 - self.x1 + 1, self.y2 - self.y1 + 1, color)
+
 class Time:
     def __init__(self):
         pass
@@ -75,11 +88,13 @@ class Logic:
 class GUI:
     def __init__(self):
         self.initialize_screen()
-        self.font = psp2d.Font('./res/font.png')
+        self.font = psp2d.Font('buttons/res/font.png')
         self.player = Player('Zuitek')
         self.logic = Logic()
-        self.menu_options = { 0:('Start',220, start_game),
-                1:('High Score',235, high_score), 2:('Exit',250, exit) }
+        #to powinna byc lista slownikow, kazdy slownik zawierac
+        #powinien cale info o jednej opcji menu
+        self.menu_options = { 0:('Start',180, self.start_game),
+                1:('High Score',200, self.high_score), 2:('Exit',220, self.exit) }
         self.OPTIONS_NUMBER = len(self.menu_options)
         self.marked_option = 0
 
@@ -106,19 +121,20 @@ class GUI:
         # wcisnij <select> aby wybrac gracza
         # if self.player != None: "wcisnij <start> aby zagrac"
         self._draw_mark_rect_in_point(100,
-                self.menu_options[self.marked_option][2])
+                self.menu_options[self.marked_option][1])
         self._print_menu_options()
+        self.screen.blit(self.image)
+        self.screen.swap()
 
     def _draw_mark_rect_in_point(self, x, y):
         color = psp2d.Color(0, 200, 0, 255)
-        rectangle = Rect(x, y, width=220, height=15)
-        rect(self.screen, color, rectangle)
+        rectangle = Rectangle(x, y, x+220, y+15)
+        rectangle.draw(self.image, color)
 
     def _print_menu_options(self):
-        font.drawText(self.screen, 180, 225, self.menu_options[0][0])
-        font.drawText(self.screen, 180, 240, self.menu_options[1][0])
-        font.drawText(self.screen, 180, 255, self.menu_options[2][0])
-        self.screen.swap()
+        self.font.drawText(self.screen, 180, 180, self.menu_options[0][0])
+        self.font.drawText(self.screen, 180, 200, self.menu_options[1][0])
+        self.font.drawText(self.screen, 180, 220, self.menu_options[2][0])
 
     def _get_chosen_menu_option(self):
         pad = psp2d.Controller()
@@ -130,6 +146,8 @@ class GUI:
             self._move_to_prev_option()
         elif pad.down:
             self._move_to_next_option()
+        self.screen.blit(self.image)
+        self.screen.swap()
 
     def _move_to_next_option(self):
         self.marked_option = (self.marked_option + 1) % 3

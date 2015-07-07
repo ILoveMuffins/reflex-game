@@ -3,5 +3,5 @@ from Button import Button
 
 class Left(Button):
     def __init__(self):
-        self.image = psp2d.Image('../res/left.jpg')
+        self.image = psp2d.Image('buttons/res/left.png')
 
