@@ -93,8 +93,8 @@ class GUI:
         self.logic = Logic()
         #to powinna byc lista slownikow, kazdy slownik zawierac
         #powinien cale info o jednej opcji menu
-        self.menu_options = { 0:('Start',180, self.start_game),
-                1:('High Score',200, self.high_score), 2:('Exit',220, self.exit) }
+        self.menu_options = { 0:('Start',170, self.start_game),
+                1:('High Score',200, self.high_score), 2:('Exit',230, self.exit) }
         self.OPTIONS_NUMBER = len(self.menu_options)
         self.marked_option = 0
 
@@ -120,6 +120,7 @@ class GUI:
         # wyswietl autora
         # wcisnij <select> aby wybrac gracza
         # if self.player != None: "wcisnij <start> aby zagrac"
+        self._clear_screen()
         self._draw_mark_rect_in_point(100,
                 self.menu_options[self.marked_option][1])
         self._print_menu_options()
@@ -132,22 +133,22 @@ class GUI:
         rectangle.draw(self.image, color)
 
     def _print_menu_options(self):
-        self.font.drawText(self.screen, 180, 180, self.menu_options[0][0])
+        self.font.drawText(self.screen, 180, 170, self.menu_options[0][0])
         self.font.drawText(self.screen, 180, 200, self.menu_options[1][0])
-        self.font.drawText(self.screen, 180, 220, self.menu_options[2][0])
+        self.font.drawText(self.screen, 180, 230, self.menu_options[2][0])
 
     def _get_chosen_menu_option(self):
         pad = psp2d.Controller()
         while not pad.start:
             self._react_to_pad_event_in_menu(pad)
+            self._draw_menu()
+            pad = psp2d.Controller()
 
     def _react_to_pad_event_in_menu(self, pad):
         if pad.up:
             self._move_to_prev_option()
         elif pad.down:
             self._move_to_next_option()
-        self.screen.blit(self.image)
-        self.screen.swap()
 
     def _move_to_next_option(self):
         self.marked_option = (self.marked_option + 1) % 3
@@ -155,7 +156,7 @@ class GUI:
     def _move_to_prev_option(self):
         self.marked_option -= 1
         if self.marked_option < 0:
-            self.marked_option = self.OPTIONS_NUMBER
+            self.marked_option = self.OPTIONS_NUMBER - 1
 
     #player, logic, time
     def start_game(self):
