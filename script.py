@@ -2,12 +2,6 @@
  @author ILoveMuffins
 '''
 
-# wyswietl 5 najlepszych wynikow z pliku/bazy danych
-# wraz z nick'ami graczy
-# wyswietl autora
-# wcisnij <select> aby wybrac gracza
-# if self.player != None: "wcisnij <start> aby zagrac"
-
 import psp2d, pspos
 import random
 from time import time
@@ -83,12 +77,15 @@ class GUI:
         self.marked_option = 0
 
     def initialize_screen(self):
+        self.image = psp2d.Image(480, 272)
         self.screen = psp2d.Screen()
         self._clear_screen()
 
     def _clear_screen(self):
         color = psp2d.Color(0,0,0,255)
-        self.screen.clear(color)
+        self.image.clear(color)
+        self.screen.blit(self.image)
+        self.screen.swap()
 
     def run(self):
         self._draw_menu()
@@ -97,7 +94,12 @@ class GUI:
         reaction_function()
 
     def _draw_menu(self):
-        self._draw_mark_rect_in_point(100, self.menu_options[self.marked_option][2])
+        #@TODO
+        # wyswietl autora
+        # wcisnij <select> aby wybrac gracza
+        # if self.player != None: "wcisnij <start> aby zagrac"
+        self._draw_mark_rect_in_point(100,
+                self.menu_options[self.marked_option][2])
         self._print_menu_options()
 
     def _draw_mark_rect_in_point(self, x, y):
@@ -109,11 +111,12 @@ class GUI:
         font.drawText(self.screen, 180, 225, self.menu_options[0][0])
         font.drawText(self.screen, 180, 240, self.menu_options[1][0])
         font.drawText(self.screen, 180, 255, self.menu_options[2][0])
+        self.screen.swap()
 
     def _get_chosen_menu_option(self):
         pad = psp2d.Controller()
         while not pad.start:
-            _react_to_pad_event_in_menu(pad)
+            self._react_to_pad_event_in_menu(pad)
 
     def _react_to_pad_event_in_menu(self, pad):
         if pad.up:
@@ -129,33 +132,42 @@ class GUI:
         if self.marked_option < 0:
             self.marked_option = self.OPTIONS_NUMBER
 
-#player, logic, time
+    #player, logic, time
     def start_game(self):
-        sleep(1)
-        while not self.player.has_all_points():
-            sleep(1)
-            self._clear_screen()
-            button = self.logic.generate_button()
-            waiting_time = self.logic.compute_time_to_wait_for_button_appear()
-            view_time = self.logic.compute_viewing_time()
-            sleep(waiting_time)
-            #@TODO
-            # narysuj teksture przechowywana przez button
-            # wystartuj watek czekajacy na wejscie, wystartuj pomiar czasu
-            # jak tylko wejscie sie pojawi zatrzymaj pomiar, usun obrazek
-            sleep(view_time)
-            # zatrzymaj pomiar czasu (jesli watek jeszcze go nie zatrzymal)
-            # usun obrazek
-            # oblicz punkty dla gracza
-            # wywolaj odpowiednie metody z API gracza
+        pass
+        #sleep(1)
+        #while not self.player.has_all_points():
+        #    sleep(1)
+        #    self._clear_screen()
+        #    button = self.logic.generate_button()
+        #    waiting_time = self.logic.compute_time_to_wait_for_button_appear()
+        #    view_time = self.logic.compute_viewing_time()
+        #    sleep(waiting_time)
+        #    self._draw_button_on_screen(button)
+        #    #@TODO
+        #    # wystartuj watek czekajacy na wejscie, wystartuj pomiar czasu
+        #    # jak tylko wejscie sie pojawi zatrzymaj pomiar, usun obrazek
+        #    sleep(view_time)
+        #    # zatrzymaj pomiar czasu (jesli watek jeszcze go nie zatrzymal)
+        #    # usun obrazek
+        #    # oblicz punkty dla gracza
+        #    # wywolaj odpowiednie metody z API gracza
 
     def high_score(self):
+        #@TODO
+        # wyswietl 5 najlepszych wynikow z pliku/bazy danych
+        # wraz z nick'ami graczy
+        pass
+
+    def _draw_button_on_screen(self, button):
         pass
 
     def exit(self):
         # for debug - red screen after 'exit'
         color = psp2d.Color(255,0,0,255)
-        self.screen.clear(color)
+        self.image.clear(color)
+        self.screen.blit(self.image)
+        self.screen.swap()
         sleep(2)
 
 gui = GUI()
