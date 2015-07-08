@@ -107,10 +107,11 @@ class GUI:
     def _clear_screen_to_black(self):
         color = psp2d.Color(0,0,0,255)
         self.image.clear(color)
+        self.screen.blit(self.image)
 
     def run(self):
         self._get_chosen_option_from_menu()
-        reaction_function = self.menu_options[self.marked_option][3]
+        reaction_function = self.menu_options[self.marked_option][2]
         reaction_function()
 
     def _get_chosen_option_from_menu(self):
@@ -118,7 +119,7 @@ class GUI:
         pad = psp2d.Controller()
         while not pad.start:
             self._react_to_pad_event_in_menu(pad)
-            sleep(0.06) #idealnie dobrana stala
+            sleep(0.067) #idealnie dobrana stala
             self._draw_menu()
             pad = psp2d.Controller()
 
@@ -127,9 +128,6 @@ class GUI:
         self._print_menu_options()
         #self._draw_mark_rect_in_point(150,
         #        self.menu_options[self.marked_option][1])
-        self._get_chosen_option_from_menu()
-        #self.screen.blit(self.image) #bez tego wyswietlaja sie czcionki
-        # bo raczej nie caly screen powinien byc blit'owany a jego czesc?
         self.screen.swap() #bez tego ekran nic nie wyswietla
 
     def _draw_mark_rect_in_point(self, x, y):
@@ -145,7 +143,8 @@ class GUI:
         elif self.marked_option == 2:
             m0, m1, m2 = '', '', '->'
         else:
-            pass #raise
+            return #raise
+        #@TODO moze nie na self.screen tylko na self.image
         self.font.drawText(self.screen, 180, 170, m0 + self.menu_options[0][0])
         self.font.drawText(self.screen, 180, 200, m1 + self.menu_options[1][0])
         self.font.drawText(self.screen, 180, 230, m2 + self.menu_options[2][0])
@@ -166,24 +165,27 @@ class GUI:
 
     #player, logic, time
     def start_game(self):
+        sleep(1)
+        while not self.player.has_all_points():
+            #sleep(1)
+            #self._clear_screen_to_black()
+            #button = self.logic.generate_button()
+            #waiting_time = self.logic.compute_time_to_wait_for_button_appear()
+            #view_time = self.logic.compute_viewing_time()
+            #sleep(waiting_time)
+            #self._draw_button_on_screen(button)
+            #@TODO
+            # wystartuj watek czekajacy na wejscie, wystartuj pomiar czasu
+            # jak tylko wejscie sie pojawi zatrzymaj pomiar, usun obrazek
+            sleep(view_time)
+            # zatrzymaj pomiar czasu (jesli watek jeszcze go nie zatrzymal)
+            # usun obrazek
+            # oblicz punkty dla gracza
+            # wywolaj odpowiednie metody z API gracza
+
+    #@TODO
+    def _draw_button_on_screen(self, button):
         pass
-        #sleep(1)
-        #while not self.player.has_all_points():
-        #    sleep(1)
-        #    self._clear_screen_to_black()
-        #    button = self.logic.generate_button()
-        #    waiting_time = self.logic.compute_time_to_wait_for_button_appear()
-        #    view_time = self.logic.compute_viewing_time()
-        #    sleep(waiting_time)
-        #    self._draw_button_on_screen(button)
-        #    #@TODO
-        #    # wystartuj watek czekajacy na wejscie, wystartuj pomiar czasu
-        #    # jak tylko wejscie sie pojawi zatrzymaj pomiar, usun obrazek
-        #    sleep(view_time)
-        #    # zatrzymaj pomiar czasu (jesli watek jeszcze go nie zatrzymal)
-        #    # usun obrazek
-        #    # oblicz punkty dla gracza
-        #    # wywolaj odpowiednie metody z API gracza
 
     def high_score(self):
         #@TODO
@@ -191,16 +193,13 @@ class GUI:
         # wraz z nick'ami graczy
         pass
 
-    def _draw_button_on_screen(self, button):
-        pass
-
     def exit(self):
         # for debug - red screen after 'exit'
-        color = psp2d.Color(255,0,0,255)
+        color = psp2d.Color(255,0,0,0)
         self.image.clear(color)
         self.screen.blit(self.image)
         self.screen.swap()
-        sleep(2)
+        sleep(1)
 
 gui = GUI()
 gui.run()
