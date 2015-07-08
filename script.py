@@ -32,13 +32,13 @@ class Rectangle(object):
 
 class Time:
     def __init__(self):
-        pass
+        self.start_time = None
 
     def save_current_time(self):
         self.start_time = time()
 
-    def get_difference(self):
-        difference = abs(time() - self.start_time)
+    def get_difference_in_sec(self):
+        difference = time() - self.start_time
         return difference
 
 class Player:
@@ -93,7 +93,7 @@ class Logic:
 
     def compute_viewing_time(self):
         #@TODO ulepsz algorytm
-        return 0.7
+        return 1
 
 class GUI:
     def __init__(self):
@@ -110,11 +110,11 @@ class GUI:
         self.marked_option = 0
 
     def initialize_screen(self):
-        self.image = psp2d.Image(480, 272)
         self.screen = psp2d.Screen()
         self._clear_screen_to_black()
 
     def _clear_screen_to_black(self):
+        self.image = psp2d.Image(480, 272)
         color = psp2d.Color(0,0,0,255)
         self.image.clear(color)
         self.screen.blit(self.image)
@@ -180,14 +180,33 @@ class GUI:
             button = self.logic.generate_button()
             waiting_time = self.logic.compute_time_to_wait_for_button_appear()
             self._wait_time_between_displaying_buttons(time=waiting_time)
-            view_time = self.logic.compute_viewing_time()
-            sleep(waiting_time)
             self._draw_button_on_screen(button)
-            self._wait_viewing_time(time=view_time)
-            pad = psp2d.Controller()
-            is_correct = self._check_answer(button, pad)
+            viewing_time = self.logic.compute_viewing_time()
+            try:
+                pad = self._get_input_by(viewing_time)
+            except:
+                is_correct = False
+            else:
+                is_correct = self._check_answer(button, pad)
             self.player.update_points(is_correct)
             self._view_answer_background(is_correct)
+
+    def _get_input_by(self, viewing_time):
+        timeLocal = Time()
+        timeLocal.save_current_time()
+        pad = psp2d.Controller()
+        while not self._input_exist(pad):
+            time_difference = timeLocal.get_difference_in_sec()
+            if time_difference > viewing_time:
+                raise Exception('timeout')
+            pad = psp2d.Controller()
+        return pad
+
+    def _input_exist(self, pad):
+        if pad.left or pad.right or pad.up or pad.down \
+                or pad.circle or pad.square or pad.cross or pad.triangle:
+            return True
+        return False
 
     def _view_answer_background(self, is_correct):
         #@TODO view_background_colored_to(GREEN)
@@ -211,32 +230,28 @@ class GUI:
         self.screen.blit(self.image)
         self.screen.swap()
 
-    def _wait_viewing_time(self, time):
-        sleep(time)
-
     def _wait_time_between_displaying_buttons(self, time):
         sleep(time)
 
     def _check_answer(self, button, pad):
-        if pad.left and type(button) is Left:
+        if pad.left and isinstance(button, Left):
             return True
-        elif pad.right and type(button) is Right:
+        elif pad.right and isinstance(button, Right):
             return True
-        elif pad.down and type(button) is Down:
+        elif pad.down and isinstance(button, Down):
             return True
-        elif pad.up and type(button) is Up:
+        elif pad.up and isinstance(button, Up):
             return True
-        elif pad.triangle and type(button) is Triangle:
+        elif pad.triangle and isinstance(button, Triangle):
             return True
-        elif pad.circle and type(button) is Circle:
+        elif pad.circle and isinstance(button, Circle):
             return True
-        elif pad.square and type(button) is Square:
+        elif pad.square and isinstance(button, Square):
             return True
-        elif pad.cross and type(button) is Cross:
+        elif pad.cross and isinstance(button, Cross):
             return True
         else:
             return False
-
 
     def _wait_minimal_time_between_displaying_buttons(time):
         sleep(time)

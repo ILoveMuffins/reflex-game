@@ -9,7 +9,7 @@ elif [ -e /media/usb0/PSP ]; then
     DEVICE="/media/usb0"
     echo "urzadzenie istnieje w $DEVICE"
 else
-    echo "urzadzenie niewidoczne"
+    echo "urzadzenie niepodlaczone"
     exit 0
 fi
 
