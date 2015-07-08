@@ -48,14 +48,20 @@ class Player:
         self.time = 0
         self.MAX_POINTS = max_points
 
-    def add_point(self):
+    def update_points(self, is_correct):
+        if is_correct:
+            self._add_point()
+        else:
+            self._sub_point()
+
+    def _add_point(self):
         self.points += 1
 
-    def sub_point(self):
+    def _sub_point(self):
         self.points -= 1
 
     def has_all_points(self):
-        return self.points == MAX_POINTS
+        return self.points == self.MAX_POINTS
 
     def add_time(self, time):
         self.time += time
@@ -67,8 +73,10 @@ class Logic:
     def __init__(self):
         self.int_to_button = { 0:Left(), 1:Right(), 2:Up(), 3:Down(),
                4:Triangle(), 5:Square(), 6:Cross(), 7:Circle() }
-        self.MAX_WAITING_TIME_FOR_BUTTON_APPEAR_SEC = 5
+        self.MAX_WAITING_TIME_FOR_BUTTON_APPEAR_SEC = 3 # 5 is too much
         self.MAX_SHOWING_FREQENCY = 25
+        self.MINIMUM_WAITING_TIME = 1
+        #self.FIRST_VIEWING_TIME_SEC = 0.4
 
     def generate_button(self):
         rand_int = random.randint(0, 7)
@@ -80,10 +88,12 @@ class Logic:
         time_to_wait_for_button_appear = \
             (self.MAX_WAITING_TIME_FOR_BUTTON_APPEAR_SEC * rand) \
             / self.MAX_SHOWING_FREQENCY
+        time_to_wait_for_button_appear += self.MINIMUM_WAITING_TIME
         return time_to_wait_for_button_appear
 
     def compute_viewing_time(self):
-        pass #@TODO
+        #@TODO ulepsz algorytm
+        return 0.7
 
 class GUI:
     def __init__(self):
@@ -144,7 +154,6 @@ class GUI:
             m0, m1, m2 = '', '', '->'
         else:
             return #raise
-        #@TODO moze nie na self.screen tylko na self.image
         self.font.drawText(self.screen, 180, 170, m0 + self.menu_options[0][0])
         self.font.drawText(self.screen, 180, 200, m1 + self.menu_options[1][0])
         self.font.drawText(self.screen, 180, 230, m2 + self.menu_options[2][0])
@@ -167,25 +176,76 @@ class GUI:
     def start_game(self):
         sleep(1)
         while not self.player.has_all_points():
-            #sleep(1)
-            #self._clear_screen_to_black()
-            #button = self.logic.generate_button()
-            #waiting_time = self.logic.compute_time_to_wait_for_button_appear()
-            #view_time = self.logic.compute_viewing_time()
-            #sleep(waiting_time)
-            #self._draw_button_on_screen(button)
-            #@TODO
-            # wystartuj watek czekajacy na wejscie, wystartuj pomiar czasu
-            # jak tylko wejscie sie pojawi zatrzymaj pomiar, usun obrazek
-            sleep(view_time)
-            # zatrzymaj pomiar czasu (jesli watek jeszcze go nie zatrzymal)
-            # usun obrazek
-            # oblicz punkty dla gracza
-            # wywolaj odpowiednie metody z API gracza
+            self._clear_screen_to_black()
+            button = self.logic.generate_button()
+            waiting_time = self.logic.compute_time_to_wait_for_button_appear()
+            self._wait_time_between_displaying_buttons(time=waiting_time)
+            view_time = self.logic.compute_viewing_time()
+            sleep(waiting_time)
+            self._draw_button_on_screen(button)
+            self._wait_viewing_time(time=view_time)
+            pad = psp2d.Controller()
+            is_correct = self._check_answer(button, pad)
+            self.player.update_points(is_correct)
+            self._view_answer_background(is_correct)
 
-    #@TODO
+    def _view_answer_background(self, is_correct):
+        #@TODO view_background_colored_to(GREEN)
+        if is_correct:
+            self._view_green_background()
+        else:
+            self._view_red_background()
+        sleep(0.1)
+
+    def _view_green_background(self):
+        color = psp2d.Color(0,255,0,255)
+        self.image = psp2d.Image(480, 272)
+        self.image.clear(color)
+        self.screen.blit(self.image)
+        self.screen.swap()
+
+    def _view_red_background(self):
+        color = psp2d.Color(255,0,0,255)
+        self.image = psp2d.Image(480, 272)
+        self.image.clear(color)
+        self.screen.blit(self.image)
+        self.screen.swap()
+
+    def _wait_viewing_time(self, time):
+        sleep(time)
+
+    def _wait_time_between_displaying_buttons(self, time):
+        sleep(time)
+
+    def _check_answer(self, button, pad):
+        if pad.left and type(button) is Left:
+            return True
+        elif pad.right and type(button) is Right:
+            return True
+        elif pad.down and type(button) is Down:
+            return True
+        elif pad.up and type(button) is Up:
+            return True
+        elif pad.triangle and type(button) is Triangle:
+            return True
+        elif pad.circle and type(button) is Circle:
+            return True
+        elif pad.square and type(button) is Square:
+            return True
+        elif pad.cross and type(button) is Cross:
+            return True
+        else:
+            return False
+
+
+    def _wait_minimal_time_between_displaying_buttons(time):
+        sleep(time)
+
     def _draw_button_on_screen(self, button):
-        pass
+        self.image = psp2d.Image(button.image)
+        #@TODO x, y = _get_coordinates_to_center_image(button.image, (480, 272))
+        self.screen.blit(self.image)
+        self.screen.swap()
 
     def high_score(self):
         #@TODO
@@ -194,17 +254,13 @@ class GUI:
         pass
 
     def exit(self):
-        # for debug - red screen after 'exit'
-        color = psp2d.Color(255,0,0,0)
-        self.image.clear(color)
-        self.screen.blit(self.image)
+        self._clear_screen_to_black()
+        self.font.drawText(self.screen, 190, 130, "EXIT")
         self.screen.swap()
-        sleep(1)
 
 gui = GUI()
 gui.run()
 
-#@TODO
 # wyswietl autora
 # wcisnij <select> aby wybrac gracza
 # if self.player != None: "wcisnij <start> aby zagrac"
