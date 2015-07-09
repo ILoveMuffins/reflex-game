@@ -4,6 +4,7 @@
 
 import psp2d, pspos
 import random
+from DB import DB
 from time import time
 from time import sleep
 from buttons.Left import Left
@@ -17,6 +18,7 @@ from buttons.Cross import Cross
 
 pspos.setclocks(20, 10)
 
+# @unused
 class Rectangle(object):
     def __init__(self, x1, y1, x2, y2):
         self.x1 = x1
@@ -31,8 +33,8 @@ class Rectangle(object):
         img.fillRect(self.x1, self.y1, self.x2 - self.x1 + 1, self.y2 - self.y1 + 1, color)
 
 class Time:
-    def __init__(self):
-        self.start_time = None
+    #def __init__(self):
+    #    self.start_time = None
 
     def save_current_time(self):
         self.start_time = time()
@@ -76,7 +78,6 @@ class Logic:
         self.MAX_WAITING_TIME_FOR_BUTTON_APPEAR_SEC = 5
         self.MAX_SHOWING_FREQENCY = 25
         self.MINIMUM_WAITING_TIME = 1.5
-        #self.FIRST_VIEWING_TIME_SEC = 0.4
 
     def generate_button(self):
         rand_int = random.randint(0, 7)
@@ -109,6 +110,8 @@ class GUI:
                 2:('Exit',230, self.exit) }
         self.OPTIONS_NUMBER = len(self.menu_options)
         self.marked_option = 0
+        self.db = DB()
+        self.quit = False
 
     def initialize_screen(self):
         self.screen = psp2d.Screen()
@@ -121,12 +124,13 @@ class GUI:
         self.screen.blit(self.image)
 
     def run(self):
-        self._get_chosen_option_from_menu()
-        reaction_function = self.menu_options[self.marked_option][2]
-        reaction_function()
+        while not self.quit:
+            self._draw_menu()
+            self._get_chosen_option_from_menu()
+            reaction_function = self.menu_options[self.marked_option][2]
+            reaction_function()
 
     def _get_chosen_option_from_menu(self):
-        self._draw_menu()
         pad = psp2d.Controller()
         while not pad.start:
             self._react_to_pad_event_in_menu(pad)
@@ -219,14 +223,14 @@ class GUI:
         sleep(0.1)
 
     def _view_green_background(self):
-        color = psp2d.Color(220,255,220,255)
+        color = psp2d.Color(0,50,0,255)
         self.image = psp2d.Image(480, 272)
         self.image.clear(color)
         self.screen.blit(self.image)
         self.screen.swap()
 
     def _view_red_background(self):
-        color = psp2d.Color(255,220,220,255)
+        color = psp2d.Color(50,0,0,255)
         self.image = psp2d.Image(480, 272)
         self.image.clear(color)
         self.screen.blit(self.image)
@@ -265,15 +269,14 @@ class GUI:
         self.screen.swap()
 
     def high_score(self):
-        #@TODO
-        # wyswietl 5 najlepszych wynikow z pliku/bazy danych
-        # wraz z nick'ami graczy
-        pass
+        #odrysuj puste tlo, start przerywa wyswietlanie
+        self.db.get_content()
 
     def exit(self):
         self._clear_screen_to_black()
         self.font.drawText(self.screen, 190, 130, "EXIT")
         self.screen.swap()
+        self.quit = True
 
 gui = GUI()
 gui.run()
