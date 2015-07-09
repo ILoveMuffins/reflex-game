@@ -15,7 +15,7 @@ from buttons.Triangle import Triangle
 from buttons.Square import Square
 from buttons.Cross import Cross
 
-pspos.setclocks(75, 37)
+pspos.setclocks(20, 10)
 
 class Rectangle(object):
     def __init__(self, x1, y1, x2, y2):
@@ -73,9 +73,9 @@ class Logic:
     def __init__(self):
         self.int_to_button = { 0:Left(), 1:Right(), 2:Up(), 3:Down(),
                4:Triangle(), 5:Square(), 6:Cross(), 7:Circle() }
-        self.MAX_WAITING_TIME_FOR_BUTTON_APPEAR_SEC = 3 # 5 is too much
+        self.MAX_WAITING_TIME_FOR_BUTTON_APPEAR_SEC = 5
         self.MAX_SHOWING_FREQENCY = 25
-        self.MINIMUM_WAITING_TIME = 1
+        self.MINIMUM_WAITING_TIME = 1.5
         #self.FIRST_VIEWING_TIME_SEC = 0.4
 
     def generate_button(self):
@@ -93,7 +93,8 @@ class Logic:
 
     def compute_viewing_time(self):
         #@TODO ulepsz algorytm
-        return 1
+        # 0.6->max 0.3->min
+        return 0.41
 
 class GUI:
     def __init__(self):
@@ -174,7 +175,8 @@ class GUI:
 
     #player, logic, time
     def start_game(self):
-        sleep(1)
+        self._clear_screen_to_black()
+        self.screen.swap()
         while not self.player.has_all_points():
             self._clear_screen_to_black()
             button = self.logic.generate_button()
@@ -217,14 +219,14 @@ class GUI:
         sleep(0.1)
 
     def _view_green_background(self):
-        color = psp2d.Color(0,255,0,255)
+        color = psp2d.Color(220,255,220,255)
         self.image = psp2d.Image(480, 272)
         self.image.clear(color)
         self.screen.blit(self.image)
         self.screen.swap()
 
     def _view_red_background(self):
-        color = psp2d.Color(255,0,0,255)
+        color = psp2d.Color(255,220,220,255)
         self.image = psp2d.Image(480, 272)
         self.image.clear(color)
         self.screen.blit(self.image)
