@@ -3,10 +3,10 @@
 '''
 
 import psp2d, pspos
-import random
 from DB import DB
 from time import time
 from time import sleep
+from random import randint
 from buttons.Left import Left
 from buttons.Right import Right
 from buttons.Up import Up
@@ -30,12 +30,10 @@ class Rectangle(object):
         return x >= self.x1 and y >= self.y1 and x <= self.x2 and y <= self.y2
 
     def draw(self, img, color=psp2d.Color(255, 0, 0)):
-        img.fillRect(self.x1, self.y1, self.x2 - self.x1 + 1, self.y2 - self.y1 + 1, color)
+        img.fillRect(self.x1, self.y1, self.x2 - self.x1 + 1,
+                self.y2 - self.y1 + 1, color)
 
 class Time:
-    #def __init__(self):
-    #    self.start_time = None
-
     def save_current_time(self):
         self.start_time = time()
 
@@ -47,7 +45,6 @@ class Player:
     def __init__(self, nick, max_points=10):
         self.nick = nick
         self.points = 0
-        self.time = 0
         self.MAX_POINTS = max_points
 
     def update_points(self, is_correct):
@@ -65,109 +62,114 @@ class Player:
     def has_all_points(self):
         return self.points == self.MAX_POINTS
 
-    def add_time(self, time):
-        self.time += time
-
-    def get_score(self):
-        return int(self.time * 1000)
-
 class Logic:
     def __init__(self):
         self.int_to_button = { 0:Left(), 1:Right(), 2:Up(), 3:Down(),
                4:Triangle(), 5:Square(), 6:Cross(), 7:Circle() }
         self.MAX_WAITING_TIME_FOR_BUTTON_APPEAR_SEC = 5
-        self.MAX_SHOWING_FREQENCY = 25
+        self.MAX_SHOWING_FREQENCY = 20
         self.MINIMUM_WAITING_TIME = 1.5
+        self.viewing_time = 0.41
 
     def generate_button(self):
-        rand_int = random.randint(0, 7)
+        rand_int = randint(0, 7)
         rand_button = self.int_to_button[rand_int]
         return rand_button
 
     def compute_time_to_wait_for_button_appear(self):
-        rand = random.randint(0, self.MAX_SHOWING_FREQENCY)
+        rand = randint(0, self.MAX_SHOWING_FREQENCY)
         time_to_wait_for_button_appear = \
             (self.MAX_WAITING_TIME_FOR_BUTTON_APPEAR_SEC * rand) \
             / self.MAX_SHOWING_FREQENCY
         time_to_wait_for_button_appear += self.MINIMUM_WAITING_TIME
         return time_to_wait_for_button_appear
 
-    def compute_viewing_time(self):
-        #@TODO ulepsz algorytm
-        # 0.6->max 0.3->min
-        return 0.41
+    def set_viewing_button_time(self, viewing_time):
+        self.viewing_time = self._validate_viewing_time(viewing_time)
+
+    def _validate_viewing_time(self, time):
+        time = max(time, 0.3)
+        time = min(time, 1)
+        return time
+
+    def get_viewing_button_time(self):
+        return self.viewing_time
 
 class GUI:
     def __init__(self):
-        self.initialize_screen()
-        self.font = psp2d.Font('buttons/res/font.png')
         self.player = Player('Zuitek')
         self.logic = Logic()
         #to powinna byc lista slownikow, kazdy slownik zawierac
         #powinien cale info o jednej opcji menu
-        self.menu_options = { 0:('Start',170, self.start_game),
-                1:('High Score',200, self.high_score),
-                2:('Exit',230, self.exit) }
-        self.OPTIONS_NUMBER = len(self.menu_options)
         self.marked_option = 0
+        self.menu_opt = [ { 'opt_name':'Start', 'yposition':170,
+                                    'reaction':self.start_game          },
+                              { 'opt_name':'High Score', 'yposition':200,
+                                    'reaction':self.high_score          },
+                              { 'opt_name':'Exit', 'yposition':230,
+                                  'reaction':self.exit                  }   ]
+        self.OPTIONS_NUMBER = len(self.menu_opt)
         self.db = DB()
         self.quit = False
+        self.font = psp2d.Font('buttons/res/font.png')
+        self.BLACK = psp2d.Color(0,0,0,255)
+        self.GREEN = psp2d.Color(0,50,0,255)
+        self.RED = psp2d.Color(50,0,0,255)
+        self._initialize_screen()
 
-    def initialize_screen(self):
+    def _initialize_screen(self):
         self.screen = psp2d.Screen()
-        self._clear_screen_to_black()
+        self._clear_screen()
 
-    def _clear_screen_to_black(self):
+    def _clear_screen(self):
         self.image = psp2d.Image(480, 272)
-        color = psp2d.Color(0,0,0,255)
-        self.image.clear(color)
+        self.image.clear(self.BLACK)
         self.screen.blit(self.image)
 
     def run(self):
         while not self.quit:
             self._draw_menu()
             self._get_chosen_option_from_menu()
-            reaction_function = self.menu_options[self.marked_option][2]
-            reaction_function()
+            reaction_funct = self.menu_opt[self.marked_option]['reaction']
+            reaction_funct()
+
+    def _draw_menu(self):
+        self._clear_screen()
+        self._print_menu_options()
+        self.screen.swap()
+
+    def _print_menu_options(self):
+        if self.marked_option == 0:
+            marks = ['->', '', '']
+        elif self.marked_option == 1:
+            marks = ['', '->', '']
+        elif self.marked_option == 2:
+            marks = ['', '', '->']
+        else:
+            raise Exception('_print_menu_options() error')
+        for option, mark in zip(self.menu_opt, marks):
+            self.font.drawText(self.screen, 180, option['yposition'],
+                mark + option['opt_name'])
+            viewing_time = self.logic.get_viewing_button_time()
+            self.font.drawText(self.screen, 200, 30, str(viewing_time))
 
     def _get_chosen_option_from_menu(self):
         pad = psp2d.Controller()
         while not pad.start:
             self._react_to_pad_event_in_menu(pad)
-            sleep(0.067) #idealnie dobrana stala
+            sleep(0.06)
             self._draw_menu()
             pad = psp2d.Controller()
-
-    def _draw_menu(self):
-        self._clear_screen_to_black()
-        self._print_menu_options()
-        #self._draw_mark_rect_in_point(150,
-        #        self.menu_options[self.marked_option][1])
-        self.screen.swap() #bez tego ekran nic nie wyswietla
-
-    def _draw_mark_rect_in_point(self, x, y):
-        color = psp2d.Color(0, 200, 0, 255)
-        rectangle = Rectangle(x, y, x+220, y+15)
-        rectangle.draw(self.image, color)
-
-    def _print_menu_options(self):
-        if self.marked_option == 0:
-            m0, m1, m2 = '->', '', ''
-        elif self.marked_option == 1:
-            m0, m1, m2 = '', '->', ''
-        elif self.marked_option == 2:
-            m0, m1, m2 = '', '', '->'
-        else:
-            return #raise
-        self.font.drawText(self.screen, 180, 170, m0 + self.menu_options[0][0])
-        self.font.drawText(self.screen, 180, 200, m1 + self.menu_options[1][0])
-        self.font.drawText(self.screen, 180, 230, m2 + self.menu_options[2][0])
 
     def _react_to_pad_event_in_menu(self, pad):
         if pad.up:
             self._move_to_prev_option()
         elif pad.down:
             self._move_to_next_option()
+        elif pad.right:
+            self._increase_viewing_button_time()
+        elif pad.left:
+            self._decrease_viewing_button_time()
 
     def _move_to_next_option(self):
         self.marked_option = (self.marked_option + 1) % 3
@@ -177,23 +179,32 @@ class GUI:
         if self.marked_option < 0:
             self.marked_option = self.OPTIONS_NUMBER - 1
 
-    #player, logic, time
+    def _increase_viewing_button_time(self):
+            viewing_time = self.logic.get_viewing_button_time()
+            viewing_time += 0.001
+            self.logic.set_viewing_button_time(viewing_time)
+
+    def _decrease_viewing_button_time(self):
+            viewing_time = self.logic.get_viewing_button_time()
+            viewing_time -= 0.001
+            self.logic.set_viewing_button_time(viewing_time)
+
     def start_game(self):
-        self._clear_screen_to_black()
+        self._clear_screen()
         self.screen.swap()
         while not self.player.has_all_points():
-            self._clear_screen_to_black()
+            self._clear_screen()
             button = self.logic.generate_button()
             waiting_time = self.logic.compute_time_to_wait_for_button_appear()
             self._wait_time_between_displaying_buttons(time=waiting_time)
             self._draw_button_on_screen(button)
-            viewing_time = self.logic.compute_viewing_time()
+            viewing_time = self.logic.get_viewing_button_time()
             try:
-                pad = self._get_input_by(viewing_time)
+                pressed_button = self._get_input_by(viewing_time)
             except:
                 is_correct = False
             else:
-                is_correct = self._check_answer(button, pad)
+                is_correct = self._check_answer(button, pressed_button)
             self.player.update_points(is_correct)
             self._view_answer_background(is_correct)
 
@@ -201,36 +212,42 @@ class GUI:
         timeLocal = Time()
         timeLocal.save_current_time()
         pad = psp2d.Controller()
-        while not self._input_exist(pad):
+        pressed_button = self._check_input(pad)
+        while not pressed_button:
             time_difference = timeLocal.get_difference_in_sec()
             if time_difference > viewing_time:
                 raise Exception('timeout')
             pad = psp2d.Controller()
-        return pad
+            pressed_button = self._check_input(pad)
+        return pressed_button
 
-    def _input_exist(self, pad):
-        if pad.left or pad.right or pad.up or pad.down \
-                or pad.circle or pad.square or pad.cross or pad.triangle:
-            return True
-        return False
+    def _check_input(self, pad):
+        if pad.left:
+            return Left()
+        elif pad.right:
+            return Right()
+        elif pad.down:
+            return Down()
+        elif pad.up:
+            return Up()
+        elif pad.triangle:
+            return Triangle()
+        elif pad.circle:
+            return Circle()
+        elif pad.square:
+            return Square()
+        elif pad.cross:
+            return Cross()
+        else:
+            return False
 
     def _view_answer_background(self, is_correct):
-        #@TODO view_background_colored_to(GREEN)
         if is_correct:
-            self._view_green_background()
+            self._view_background_colored_to(self.GREEN)
         else:
-            self._view_red_background()
-        sleep(0.1)
+            self._view_background_colored_to(self.RED)
 
-    def _view_green_background(self):
-        color = psp2d.Color(0,50,0,255)
-        self.image = psp2d.Image(480, 272)
-        self.image.clear(color)
-        self.screen.blit(self.image)
-        self.screen.swap()
-
-    def _view_red_background(self):
-        color = psp2d.Color(50,0,0,255)
+    def _view_background_colored_to(self, color):
         self.image = psp2d.Image(480, 272)
         self.image.clear(color)
         self.screen.blit(self.image)
@@ -239,41 +256,23 @@ class GUI:
     def _wait_time_between_displaying_buttons(self, time):
         sleep(time)
 
-    def _check_answer(self, button, pad):
-        if pad.left and isinstance(button, Left):
-            return True
-        elif pad.right and isinstance(button, Right):
-            return True
-        elif pad.down and isinstance(button, Down):
-            return True
-        elif pad.up and isinstance(button, Up):
-            return True
-        elif pad.triangle and isinstance(button, Triangle):
-            return True
-        elif pad.circle and isinstance(button, Circle):
-            return True
-        elif pad.square and isinstance(button, Square):
-            return True
-        elif pad.cross and isinstance(button, Cross):
+    def _check_answer(self, button, pressed_button):
+        if button.__class__ == pressed_button.__class__:
             return True
         else:
             return False
 
-    def _wait_minimal_time_between_displaying_buttons(time):
-        sleep(time)
-
     def _draw_button_on_screen(self, button):
         self.image = psp2d.Image(button.image)
-        #@TODO x, y = _get_coordinates_to_center_image(button.image, (480, 272))
         self.screen.blit(self.image)
         self.screen.swap()
 
     def high_score(self):
         #odrysuj puste tlo, start przerywa wyswietlanie
-        self.db.get_content()
+        db_contents = self.db.get_contents()
 
     def exit(self):
-        self._clear_screen_to_black()
+        self._clear_screen()
         self.font.drawText(self.screen, 190, 130, "EXIT")
         self.screen.swap()
         self.quit = True
@@ -283,5 +282,4 @@ gui.run()
 
 # wyswietl autora
 # wcisnij <select> aby wybrac gracza
-# if self.player != None: "wcisnij <start> aby zagrac"
-
+# 0.6->max 0.3->min
