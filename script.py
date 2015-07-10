@@ -97,7 +97,6 @@ class Logic:
 
 class GUI:
     def __init__(self):
-        self.player = Player('Zuitek')
         self.logic = Logic()
         #to powinna byc lista slownikow, kazdy slownik zawierac
         #powinien cale info o jednej opcji menu
@@ -128,6 +127,8 @@ class GUI:
 
     def run(self):
         while not self.quit:
+            self.player = Player('Zuitek')
+            self.quit_to_menu = False
             self._draw_menu()
             self._get_chosen_option_from_menu()
             reaction_funct = self.menu_opt[self.marked_option]['reaction']
@@ -157,7 +158,7 @@ class GUI:
         pad = psp2d.Controller()
         while not pad.start:
             self._react_to_pad_event_in_menu(pad)
-            sleep(0.06)
+            sleep(0.03)
             self._draw_menu()
             pad = psp2d.Controller()
 
@@ -192,7 +193,7 @@ class GUI:
     def start_game(self):
         self._clear_screen()
         self.screen.swap()
-        while not self.player.has_all_points():
+        while not self.player.has_all_points() and not self.quit_to_menu:
             self._clear_screen()
             button = self.logic.generate_button()
             waiting_time = self.logic.compute_time_to_wait_for_button_appear()
@@ -238,6 +239,8 @@ class GUI:
             return Square()
         elif pad.cross:
             return Cross()
+        elif pad.select:
+            self.quit_to_menu = True
         else:
             return False
 
@@ -283,3 +286,4 @@ gui.run()
 # wyswietl autora
 # wcisnij <select> aby wybrac gracza
 # 0.6->max 0.3->min
+
