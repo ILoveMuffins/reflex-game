@@ -3,7 +3,7 @@
 '''
 
 import psp2d, pspos
-from DB import DB
+import anydbm
 from time import time
 from time import sleep
 from random import randint
@@ -37,15 +37,14 @@ class Time:
     def save_current_time(self):
         self.start_time = time()
 
-    def get_difference_in_sec(self):
+    def get_difference(self):
         difference = time() - self.start_time
         return difference
 
 class Player:
-    def __init__(self, nick, max_points=10):
-        self.nick = nick
+    def __init__(self):
         self.points = 0
-        self.MAX_POINTS = max_points
+        self.MAX_POINTS = 10
 
     def update_points(self, is_correct):
         if is_correct:
@@ -58,9 +57,13 @@ class Player:
 
     def _sub_point(self):
         self.points -= 1
+        self.points = max(self.points, 0)
 
     def has_all_points(self):
         return self.points == self.MAX_POINTS
+
+    def set_nick(nick):
+        self.nick = nick
 
 class Logic:
     def __init__(self):
@@ -68,8 +71,12 @@ class Logic:
                4:Triangle(), 5:Square(), 6:Cross(), 7:Circle() }
         self.MAX_WAITING_TIME_FOR_BUTTON_APPEAR_SEC = 5
         self.MAX_SHOWING_FREQENCY = 20
-        self.MINIMUM_WAITING_TIME = 1.5
-        self.viewing_time = 0.41
+        self.MINIMUM_WAITING_TIME = 2
+        self.viewing_time = 0.37
+        self.counter = 0
+        self.time_for_checking_timer_update = Time()
+        self.time_for_checking_timer_update.save_current_time()
+        self.timer_speed = 0.001
 
     def generate_button(self):
         rand_int = randint(0, 7)
@@ -88,18 +95,37 @@ class Logic:
         self.viewing_time = self._validate_viewing_time(viewing_time)
 
     def _validate_viewing_time(self, time):
-        time = max(time, 0.3)
+        time = max(time, 0.2)
         time = min(time, 1)
         return time
 
     def get_viewing_button_time(self):
         return self.viewing_time
 
+    def compute_time_to_update_menu_timer(self):
+        if self._was_time_mutation_button_hold():
+            self.counter += 1
+            if self._is_delay_finished():
+                self.counter = 0
+                self.timer_speed += 0.003
+        else:
+            self.timer_speed = 0.001
+        self.time_for_checking_timer_update.save_current_time()
+        return self.timer_speed
+
+    def _was_time_mutation_button_hold(self):
+        threshold = 0.22
+        if self.time_for_checking_timer_update.get_difference() < threshold:
+            return True
+        else:
+            return False
+
+    def _is_delay_finished(self):
+        return True if self.counter == 17 else False
+
 class GUI:
     def __init__(self):
         self.logic = Logic()
-        #to powinna byc lista slownikow, kazdy slownik zawierac
-        #powinien cale info o jednej opcji menu
         self.marked_option = 0
         self.menu_opt = [ { 'opt_name':'Start', 'yposition':170,
                                     'reaction':self.start_game          },
@@ -108,13 +134,18 @@ class GUI:
                               { 'opt_name':'Exit', 'yposition':230,
                                   'reaction':self.exit                  }   ]
         self.OPTIONS_NUMBER = len(self.menu_opt)
-        self.db = DB()
         self.quit = False
         self.font = psp2d.Font('buttons/res/font.png')
         self.BLACK = psp2d.Color(0,0,0,255)
         self.GREEN = psp2d.Color(0,50,0,255)
         self.RED = psp2d.Color(50,0,0,255)
         self._initialize_screen()
+        self._include_ptDanzeffPyOSK()
+        self.database = anydbm.open('scores.db', 'c')
+
+    def _include_ptDanzeffPyOSK(self):
+        #requires that screen = psp2d.Screen()
+        execfile(".\\danzeff\\danzeff.py")
 
     def _initialize_screen(self):
         self.screen = psp2d.Screen()
@@ -127,7 +158,6 @@ class GUI:
 
     def run(self):
         while not self.quit:
-            self.player = Player('Zuitek')
             self.quit_to_menu = False
             self._draw_menu()
             self._get_chosen_option_from_menu()
@@ -158,7 +188,7 @@ class GUI:
         pad = psp2d.Controller()
         while not pad.start:
             self._react_to_pad_event_in_menu(pad)
-            sleep(0.03)
+            sleep(0.02) # ta wartosc wplywa na threshold w klasie logic
             self._draw_menu()
             pad = psp2d.Controller()
 
@@ -182,42 +212,57 @@ class GUI:
 
     def _increase_viewing_button_time(self):
             viewing_time = self.logic.get_viewing_button_time()
-            viewing_time += 0.001
+            viewing_time += self.logic.compute_time_to_update_menu_timer()
             self.logic.set_viewing_button_time(viewing_time)
 
     def _decrease_viewing_button_time(self):
             viewing_time = self.logic.get_viewing_button_time()
-            viewing_time -= 0.001
+            viewing_time -= self.logic.compute_time_to_update_menu_timer()
             self.logic.set_viewing_button_time(viewing_time)
 
     def start_game(self):
         self._clear_screen()
         self.screen.swap()
+        self.player = Player()
         while not self.player.has_all_points() and not self.quit_to_menu:
-            self._clear_screen()
-            button = self.logic.generate_button()
             waiting_time = self.logic.compute_time_to_wait_for_button_appear()
-            self._wait_time_between_displaying_buttons(time=waiting_time)
-            self._draw_button_on_screen(button)
-            viewing_time = self.logic.get_viewing_button_time()
-            try:
-                pressed_button = self._get_input_by(viewing_time)
-            except:
-                is_correct = False
-            else:
-                is_correct = self._check_answer(button, pressed_button)
-            self.player.update_points(is_correct)
-            self._view_answer_background(is_correct)
+            if self._did_quit_evt_appear_while_waiting_for(time=waiting_time):
+                break
+            is_correct = self._challenge()
+            self._update_game_after_challenge(is_correct)
+        if self.player.has_all_points():
+            self._update_high_score()
 
-    def _get_input_by(self, viewing_time):
-        timeLocal = Time()
-        timeLocal.save_current_time()
+    def _challenge(self):
+        self._clear_screen()
+        button = self.logic.generate_button()
+        viewing_time = self.logic.get_viewing_button_time()
+        self._draw_button_on_screen(button)
+        pressed_button = self._get_input_by_else_false(viewing_time)
+        is_correct = self._check_answer(button, pressed_button)
+        return is_correct
+
+    def _update_game_after_challenge(self, is_correct):
+        self.player.update_points(is_correct)
+        self._view_answer_background(is_correct)
+
+    def _update_high_score(self):
+        #TODO pobierz nick gracza
+        nick = 'kamil'
+        if nick in self.database:
+            if float(self.database[nick]) > self.logic.viewing_time:
+                self.database[nick] = str(self.logic.viewing_time)
+        else:
+            self.database[nick] = str(self.logic.viewing_time)
+
+    def _get_input_by_else_false(self, viewing_time):
+        local_time = Time()
+        local_time.save_current_time()
         pad = psp2d.Controller()
         pressed_button = self._check_input(pad)
         while not pressed_button:
-            time_difference = timeLocal.get_difference_in_sec()
-            if time_difference > viewing_time:
-                raise Exception('timeout')
+            if local_time.get_difference() > viewing_time:
+                return False
             pad = psp2d.Controller()
             pressed_button = self._check_input(pad)
         return pressed_button
@@ -256,8 +301,16 @@ class GUI:
         self.screen.blit(self.image)
         self.screen.swap()
 
-    def _wait_time_between_displaying_buttons(self, time):
-        sleep(time)
+    def _did_quit_evt_appear_while_waiting_for(self, time):
+        quantum_time = time / 35
+        local_time = Time()
+        local_time.save_current_time()
+        while local_time.get_difference() < time:
+            sleep(quantum_time)
+            pad = psp2d.Controller()
+            if pad.select:
+                return True
+        return False
 
     def _check_answer(self, button, pressed_button):
         if button.__class__ == pressed_button.__class__:
@@ -271,8 +324,17 @@ class GUI:
         self.screen.swap()
 
     def high_score(self):
-        #odrysuj puste tlo, start przerywa wyswietlanie
-        db_contents = self.db.get_contents()
+        self._clear_screen()
+        x, y = 0, 30
+        self.font.drawText(self.screen, x, 0, 'High scores')
+        for k, v in self.database.iteritems():
+            self.font.drawText(self.screen, x, y, k + "-" * (29-len(k)) + v)
+            y += 30
+        self.screen.swap()
+        pad = psp2d.Controller()
+        while not pad.select and not pad.start:
+            sleep(0.2)
+            pad = psp2d.Controller()
 
     def exit(self):
         self._clear_screen()
@@ -282,8 +344,4 @@ class GUI:
 
 gui = GUI()
 gui.run()
-
-# wyswietl autora
-# wcisnij <select> aby wybrac gracza
-# 0.6->max 0.3->min
 
