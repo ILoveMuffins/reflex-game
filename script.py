@@ -16,7 +16,12 @@ from buttons.Triangle import Triangle
 from buttons.Square import Square
 from buttons.Cross import Cross
 
+screen = psp2d.Screen()
+fnt = psp2d.Font('buttons/res/font.png')
+
 pspos.setclocks(20, 10)
+
+execfile(".\\danzeff\\danzeff.py")
 
 # @unused
 class Rectangle(object):
@@ -107,7 +112,7 @@ class Logic:
             self.counter += 1
             if self._is_delay_finished():
                 self.counter = 0
-                self.timer_speed += 0.003
+                self.timer_speed *= 3
         else:
             self.timer_speed = 0.001
         self.time_for_checking_timer_update.save_current_time()
@@ -140,12 +145,7 @@ class GUI:
         self.GREEN = psp2d.Color(0,50,0,255)
         self.RED = psp2d.Color(50,0,0,255)
         self._initialize_screen()
-        self._include_ptDanzeffPyOSK()
         self.database = anydbm.open('scores.db', 'c')
-
-    def _include_ptDanzeffPyOSK(self):
-        #requires that screen = psp2d.Screen()
-        execfile(".\\danzeff\\danzeff.py")
 
     def _initialize_screen(self):
         self.screen = psp2d.Screen()
@@ -247,13 +247,43 @@ class GUI:
         self._view_answer_background(is_correct)
 
     def _update_high_score(self):
-        #TODO pobierz nick gracza
-        nick = 'kamil'
+        nick = self._get_nick()
         if nick in self.database:
             if float(self.database[nick]) > self.logic.viewing_time:
                 self.database[nick] = str(self.logic.viewing_time)
         else:
             self.database[nick] = str(self.logic.viewing_time)
+
+    def _get_nick(self):
+        global screen
+        global fnt
+        val = ''
+        screen = psp2d.Screen()
+        danzeff_load()
+        danzeff_moveTo(220, 20)
+        while (True):
+            # Prepare background
+            screen.blit(self.image)
+            # ptDanzeff PyOSK: Render OSK on screen
+            danzeff_render()
+            # ptDanzeff PyOSK: Returns OSK input as an integer
+            cha = danzeff_readInput(psp2d.Controller())
+            # Now Evaluate return value and take proper action
+            if (cha != 0 and cha != 1 and cha != 2):
+                if (cha == 8):
+                    val = val[0:len(val)-1]
+                elif (cha == 13):
+                    val = ""
+                elif (cha == 4):
+                    return val
+                else:
+                    val = val + chr(cha)
+            # Print current input string
+            fnt.drawText(screen, 5, 230, val)
+            # Refresh screen
+            screen.swap()
+        danzeff_free()
+        return val
 
     def _get_input_by_else_false(self, viewing_time):
         local_time = Time()
