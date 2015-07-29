@@ -23,7 +23,7 @@ pspos.setclocks(20, 10)
 
 execfile(".\\danzeff\\danzeff.py")
 
-# @unused
+# unused
 class Rectangle(object):
     def __init__(self, x1, y1, x2, y2):
         self.x1 = x1
@@ -50,18 +50,10 @@ class Player:
     def __init__(self):
         self.points = 0
         self.MAX_POINTS = 10
+        self.bool_to_point = { False : -1, True : 1}
 
     def update_points(self, is_correct):
-        if is_correct:
-            self._add_point()
-        else:
-            self._sub_point()
-
-    def _add_point(self):
-        self.points += 1
-
-    def _sub_point(self):
-        self.points -= 1
+        self.points += self.bool_to_point[is_correct]
         self.points = max(self.points, 0)
 
     def has_all_points(self):
@@ -90,19 +82,13 @@ class Logic:
 
     def compute_time_to_wait_for_button_appear(self):
         rand = randint(0, self.MAX_SHOWING_FREQENCY)
+
         time_to_wait_for_button_appear = \
             (self.MAX_WAITING_TIME_FOR_BUTTON_APPEAR_SEC * rand) \
             / self.MAX_SHOWING_FREQENCY
         time_to_wait_for_button_appear += self.MINIMUM_WAITING_TIME
+
         return time_to_wait_for_button_appear
-
-    def set_viewing_button_time(self, viewing_time):
-        self.viewing_time = self._validate_viewing_time(viewing_time)
-
-    def _validate_viewing_time(self, time):
-        time = max(time, 0.2)
-        time = min(time, 1)
-        return time
 
     def get_viewing_button_time(self):
         return self.viewing_time
@@ -127,6 +113,18 @@ class Logic:
 
     def _is_delay_finished(self):
         return True if self.counter == 17 else False
+
+    def increase_viewing_button_time(self):
+        self.viewing_time += self.compute_time_to_update_menu_timer()
+        self._validate_button_viewing_time()
+
+    def decrease_viewing_button_time(self):
+        self.viewing_time -= self.compute_time_to_update_menu_timer()
+        self._validate_button_viewing_time()
+
+    def _validate_button_viewing_time(self):
+        self.viewing_time = max(self.viewing_time, 0.2)
+        self.viewing_time = min(self.viewing_time, 1)
 
 class GUI:
     def __init__(self):
@@ -161,8 +159,7 @@ class GUI:
             self.quit_to_menu = False
             self._draw_menu()
             self._get_chosen_option_from_menu()
-            reaction_funct = self.menu_opt[self.marked_option]['reaction']
-            reaction_funct()
+            self.menu_opt[self.marked_option]['reaction']()
 
     def _draw_menu(self):
         self._clear_screen()
@@ -170,14 +167,9 @@ class GUI:
         self.screen.swap()
 
     def _print_menu_options(self):
-        if self.marked_option == 0:
-            marks = ['->', '', '']
-        elif self.marked_option == 1:
-            marks = ['', '->', '']
-        elif self.marked_option == 2:
-            marks = ['', '', '->']
-        else:
-            raise Exception('_print_menu_options() error')
+        marks = [''] * ( len(self.menu_opt) - 1)
+        marks.insert(self.marked_option, '->')
+
         for option, mark in zip(self.menu_opt, marks):
             self.font.drawText(self.screen, 180, option['yposition'],
                 mark + option['opt_name'])
@@ -198,9 +190,9 @@ class GUI:
         elif pad.down:
             self._move_to_next_option()
         elif pad.right:
-            self._increase_viewing_button_time()
+            self.logic.increase_viewing_button_time()
         elif pad.left:
-            self._decrease_viewing_button_time()
+            self.logic.decrease_viewing_button_time()
 
     def _move_to_next_option(self):
         self.marked_option = (self.marked_option + 1) % 3
@@ -209,16 +201,6 @@ class GUI:
         self.marked_option -= 1
         if self.marked_option < 0:
             self.marked_option = self.OPTIONS_NUMBER - 1
-
-    def _increase_viewing_button_time(self):
-            viewing_time = self.logic.get_viewing_button_time()
-            viewing_time += self.logic.compute_time_to_update_menu_timer()
-            self.logic.set_viewing_button_time(viewing_time)
-
-    def _decrease_viewing_button_time(self):
-            viewing_time = self.logic.get_viewing_button_time()
-            viewing_time -= self.logic.compute_time_to_update_menu_timer()
-            self.logic.set_viewing_button_time(viewing_time)
 
     def start_game(self):
         self._clear_screen()
@@ -245,45 +227,6 @@ class GUI:
     def _update_game_after_challenge(self, is_correct):
         self.player.update_points(is_correct)
         self._view_answer_background(is_correct)
-
-    def _update_high_score(self):
-        nick = self._get_nick()
-        if nick in self.database:
-            if float(self.database[nick]) > self.logic.viewing_time:
-                self.database[nick] = str(self.logic.viewing_time)
-        else:
-            self.database[nick] = str(self.logic.viewing_time)
-
-    def _get_nick(self):
-        global screen
-        global fnt
-        val = ''
-        screen = psp2d.Screen()
-        danzeff_load()
-        danzeff_moveTo(220, 20)
-        while (True):
-            # Prepare background
-            screen.blit(self.image)
-            # ptDanzeff PyOSK: Render OSK on screen
-            danzeff_render()
-            # ptDanzeff PyOSK: Returns OSK input as an integer
-            cha = danzeff_readInput(psp2d.Controller())
-            # Now Evaluate return value and take proper action
-            if (cha != 0 and cha != 1 and cha != 2):
-                if (cha == 8):
-                    val = val[0:len(val)-1]
-                elif (cha == 13):
-                    val = ""
-                elif (cha == 4):
-                    return val
-                else:
-                    val = val + chr(cha)
-            # Print current input string
-            fnt.drawText(screen, 5, 230, val)
-            # Refresh screen
-            screen.swap()
-        danzeff_free()
-        return val
 
     def _get_input_by_else_false(self, viewing_time):
         local_time = Time()
@@ -365,6 +308,45 @@ class GUI:
         while not pad.select and not pad.start:
             sleep(0.2)
             pad = psp2d.Controller()
+
+    def _update_high_score(self):
+        nick = self._get_nick()
+        if nick in self.database:
+            if float(self.database[nick]) > self.logic.viewing_time:
+                self.database[nick] = str(self.logic.viewing_time)
+        else:
+            self.database[nick] = str(self.logic.viewing_time)
+
+    def _get_nick(self):
+        global screen
+        global fnt
+        val = ''
+        screen = psp2d.Screen()
+        danzeff_load()
+        danzeff_moveTo(220, 20)
+        while (True):
+            # Prepare background
+            screen.blit(self.image)
+            # ptDanzeff PyOSK: Render OSK on screen
+            danzeff_render()
+            # ptDanzeff PyOSK: Returns OSK input as an integer
+            cha = danzeff_readInput(psp2d.Controller())
+            # Now Evaluate return value and take proper action
+            if (cha != 0 and cha != 1 and cha != 2):
+                if (cha == 8):
+                    val = val[0:len(val)-1]
+                elif (cha == 13):
+                    val = ""
+                elif (cha == 4):
+                    return val
+                else:
+                    val = val + chr(cha)
+            # Print current input string
+            fnt.drawText(screen, 5, 230, val)
+            # Refresh screen
+            screen.swap()
+        danzeff_free()
+        return val
 
     def exit(self):
         self._clear_screen()
